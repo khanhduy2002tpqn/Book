@@ -21,6 +21,11 @@ class Settings(BaseSettings):
     
     # Embeddings
     EMBEDDING_MODEL: str = "BAAI/bge-m3"
+
+    # Text-To-Speech (TTS) settings
+    TTS_ENGINE: str = "edge"  # "edge" (giọng tự nhiên, có auto fallback) hoặc "gtts" (Google TTS siêu tốc <0.5s)
+    TTS_VOICE: str = "vi-VN-HoaiMyNeural"
+    TTS_RATE: str = "+10%"
     
     # RAG parameters
     TOP_K: int = 5

@@ -24,6 +24,16 @@ Rules:
 10. Mathematical formulas and symbols: Always format ALL mathematical formulas, variables, and expressions using standard LaTeX syntax. Use single dollar signs `$ ... $` for inline math (ví dụ: `$x$`, `$\\sin x$`, `$y = \\tan x$`, `$\\mathbb{R} \\setminus \\{\\frac{\\pi}{2} + k\\pi \\mid k \\in \\mathbb{Z}\\}$`), and double dollar signs `$$ ... $$` for block display equations. Ensure LaTeX syntax is clean and standard for KaTeX rendering.
 """
 
+VOICE_SYSTEM_PROMPT = """Bạn là trợ lý học tập AI giao tiếp bằng giọng nói qua loa thông minh của học sinh.
+Nhiệm vụ: Trả lời câu hỏi của học sinh dựa trên tài liệu sách giáo khoa được cung cấp.
+Quy tắc BẮT BUỘC dành cho giao tiếp bằng GIỌNG NÓI:
+1. Trả lời trực tiếp, cô đọng, súc tích (chỉ từ 2 đến 3 câu văn ngắn, tối đa khoảng 40 đến 60 từ).
+2. Đi thẳng vào bản chất câu trả lời. TUYỆT ĐỐI KHÔNG mở đầu bằng các câu thừa như "Dựa trên tài liệu được cung cấp...", "Theo sách giáo khoa...", v.v.
+3. TUYỆT ĐỐI KHÔNG dùng ký tự Markdown, không dùng gạch đầu dòng, dấu hoa thị (**), số trang ([Trang 41]), bảng biểu hay công thức toán LaTeX phức tạp.
+4. Diễn đạt bằng câu văn trọn vẹn, rành mạch, dễ hiểu khi đọc thành tiếng qua loa.
+5. Nếu không có thông tin trong tài liệu, trả lời ngắn gọn: "Thông tin này chưa có trong sách giáo khoa."
+"""
+
 
 class GeminiService:
     def __init__(self):
@@ -208,6 +218,36 @@ Hãy trả lời câu hỏi dựa trên các đoạn trích trên và trích d�
                     raise RuntimeError(f"Lỗi Gemini: {str(e)}")
 
         raise RuntimeError(f"Không thể kết nối đến model Gemini nào khả dụng: {str(last_error)}")
+
+    def generate_voice_answer(
+        self,
+        query: str,
+        context_chunks: List[Dict[str, Any]]
+    ) -> str:
+        """
+        Generate a concise, spoken answer specifically for Voice Assistant (ESP32 speaker).
+        Under 60 words, direct, no Markdown, no citations, so TTS can synthesize in ~1s.
+        """
+        if not context_chunks:
+            return "Thông tin này chưa được tìm thấy trong sách giáo khoa."
+
+        context_texts = [c.get("text", "").strip() for c in context_chunks if c.get("text")]
+        context_str = "\n\n".join(context_texts[:3])
+
+        prompt = f"""Dưới đây là nội dung trích xuất từ sách giáo khoa:
+===
+{context_str}
+===
+
+Câu hỏi của học sinh: {query}
+
+Hãy trả lời câu hỏi trên thật ngắn gọn, súc tích (khoảng 2 đến 3 câu văn) bằng ngôn từ tự nhiên để đọc ra loa cho học sinh nghe."""
+
+        try:
+            return self.generate_text(prompt, system_instruction=VOICE_SYSTEM_PROMPT)
+        except Exception as e:
+            logger.error(f"Error in generate_voice_answer: {e}")
+            return "Đã xảy ra lỗi khi tạo câu trả lời giọng nói."
 
     def extract_text_from_image(self, image_bytes: bytes) -> str:
         """

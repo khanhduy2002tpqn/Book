@@ -1,4 +1,5 @@
 import logging
+import threading
 from typing import List
 import numpy as np
 from app.config import settings
@@ -9,6 +10,7 @@ logger = logging.getLogger(__name__)
 class EmbeddingService:
     _instance = None
     _model = None
+    _lock = threading.Lock()
 
     def __new__(cls):
         if cls._instance is None:
@@ -17,22 +19,25 @@ class EmbeddingService:
 
     def _load_model(self):
         if self._model is None:
-            try:
-                from sentence_transformers import SentenceTransformer
-                logger.info(f"Loading local embedding model: {settings.EMBEDDING_MODEL}")
-                self._model = SentenceTransformer(settings.EMBEDDING_MODEL)
-                logger.info("Embedding model loaded successfully.")
-            except Exception as e:
-                logger.error(f"Failed to load embedding model {settings.EMBEDDING_MODEL}: {e}")
-                # Fallback to standard lightweight model if bge-m3 is not yet cached or fails
-                try:
-                    from sentence_transformers import SentenceTransformer
-                    fallback_name = "sentence-transformers/all-MiniLM-L6-v2"
-                    logger.warning(f"Falling back to {fallback_name}...")
-                    self._model = SentenceTransformer(fallback_name)
-                except Exception as fallback_err:
-                    logger.error(f"Failed to load fallback embedding model: {fallback_err}")
-                    raise RuntimeError(f"Could not initialize any embedding model: {e}")
+            with self._lock:
+                if self._model is None:
+                    try:
+                        from sentence_transformers import SentenceTransformer
+                        logger.info(f"Loading local embedding model: {settings.EMBEDDING_MODEL}")
+                        self._model = SentenceTransformer(settings.EMBEDDING_MODEL)
+                        logger.info("Embedding model loaded successfully.")
+                    except Exception as e:
+                        logger.error(f"Failed to load embedding model {settings.EMBEDDING_MODEL}: {e}", exc_info=True)
+                        # Fallback to standard lightweight model if bge-m3 is not yet cached or fails
+                        try:
+                            from sentence_transformers import SentenceTransformer
+                            fallback_name = "sentence-transformers/all-MiniLM-L6-v2"
+                            logger.warning(f"Falling back to {fallback_name}...")
+                            self._model = SentenceTransformer(fallback_name)
+                            logger.info("Fallback embedding model loaded successfully.")
+                        except Exception as fallback_err:
+                            logger.error(f"Failed to load fallback embedding model: {fallback_err}", exc_info=True)
+                            raise RuntimeError(f"Could not initialize any embedding model: {e}")
 
     def embed_texts(self, texts: List[str]) -> List[List[float]]:
         """

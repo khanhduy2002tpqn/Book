@@ -19,12 +19,12 @@ if not exist "backend\venv\Scripts\uvicorn.exe" (
 
 :: 2. Giai phong port 8000 va 5173 neu dang bi chiem dung boi tien trinh cu
 echo Dang kiem tra va giai phong cac port 8000 va 5173 neu co...
-for /f "tokens=5" %%a in ('netstat -aon ^| findstr :8000 ^| findstr LISTENING') do taskkill /f /pid %%a >nul 2>&1
-for /f "tokens=5" %%a in ('netstat -aon ^| findstr :5173 ^| findstr LISTENING') do taskkill /f /pid %%a >nul 2>&1
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr :8000 ^| findstr LISTENING') do taskkill /f /t /pid %%a >nul 2>&1
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr :5173 ^| findstr LISTENING') do taskkill /f /t /pid %%a >nul 2>&1
 
-:: 3. Khoi dong Backend FastAPI tai port 8000
-echo [1/2] Dang khoi dong Backend FastAPI tai http://localhost:8000 ...
-start "AI PDF Reader - Backend" cmd /k "cd /d %~dp0backend && venv\Scripts\activate && uvicorn app.main:app --reload --port 8000"
+:: 3. Khoi dong Backend FastAPI tai port 8000 (bind 0.0.0.0 cho phep ESP32 / LAN ket noi)
+echo [1/2] Dang khoi dong Backend FastAPI tai http://0.0.0.0:8000 ...
+start "AI PDF Reader - Backend" cmd /k "cd /d %~dp0backend && venv\Scripts\activate && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
 
 :: 4. Khoi dong Frontend Vite tai port 5173
 echo [2/2] Dang khoi dong Frontend Vite tai http://localhost:5173 ...

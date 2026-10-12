@@ -23,6 +23,15 @@ async def lifespan(app: FastAPI):
     init_db()
     logger.info(f"App '{settings.PROJECT_NAME}' started successfully.")
 
+    # Pre-warm embedding model to avoid search latency on first user/ESP32 query
+    try:
+        from app.services.embedding import embedding_service
+        logger.info("Pre-warming local embedding model...")
+        embedding_service._load_model()
+        logger.info("Embedding model pre-warmed and ready.")
+    except Exception as e:
+        logger.error(f"Failed to pre-warm embedding model at startup: {e}", exc_info=True)
+
     # Auto-resume any interrupted document background processing
     try:
         import threading
